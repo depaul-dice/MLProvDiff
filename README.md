@@ -12,3 +12,4 @@
 - Data Request (1:40pm - 3:40pm)
   1. Dhruv's Request for small sized data
   2. Full automization
+- Integrity check (4:15pm - 5:00pm)
