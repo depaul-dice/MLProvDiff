@@ -17,3 +17,5 @@
 - Graphsage Intergrity Check Pass
   1. Test data with 100 traces and 200 nodes
   2. 100% Accuracy
+  3. To replicate, 
+    - graphSage.ipynb 
