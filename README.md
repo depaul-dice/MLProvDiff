@@ -28,4 +28,4 @@
     - Run ```integrityCheck/graphSage+BiLSTM.ipynb``` to run train and test
 - Findings
   1. MLP can be redundant. We can just use graphsage embedding to get feature vectors corresponding to each node
-  2. BiLSTM is necessary for encapsulating the sequence information
+  2. BiLSTM is necessary for encapsulating the sequence information of the traces
