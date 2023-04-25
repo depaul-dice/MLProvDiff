@@ -18,4 +18,5 @@
   1. Test data with 100 traces and 200 nodes
   2. 100% Accuracy
   3. To replicate, 
-    - graphSage.ipynb 
+    - Run ```generateData/simple.ipynb``` to generate data
+    - Run ```integrityCheck/graphSage.ipynb``` to run train and test
