@@ -20,3 +20,9 @@
   3. To replicate, 
     - Run ```generateData/simple.ipynb``` to generate data
     - Run ```integrityCheck/graphSage.ipynb``` to run train and test
+- BiLSTM + Graphsage Integrity Check Pass
+  1. Test data with 100 traces and 200 nodes
+  2. 100% Accuracy
+  3. To replicate, 
+    - Run ```generateData/simple.ipynb``` to generate data
+    - Run ```integrityCheck/graphSage+BiLSTM.ipynb``` to run train and test
