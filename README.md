@@ -35,3 +35,4 @@
   2. 100% accuracy for 50+ traces
 - Stage 3 Integrity Check Start
   1. Need to look up masking. Training or inferencing?
+  - Usually masking is done during the inference. However, we have a different problem here, where the choices (for which will be the next node) are very limited.
