@@ -35,4 +35,6 @@
   2. 100% accuracy for 50+ traces
 - Stage 3 Integrity Check Start
   1. Need to look up masking. Training or inferencing?
-  - Usually masking is done during the inference. However, we have a different problem here, where the choices (for which will be the next node) are very limited.
+  - Usually masking is done during the inference. However, we have a different problem here, where the choices (for which will be the next node) are very limited. When we do a conventional masking, the inference of the labels of the later nodes does not take advantage of the narrow choices because the dot product is done altogether by a matrix to matrix multiplication.
+  - We might benefit if the inference of the label for each node is sequential, in order to build up on the prior knowledge. 
+  2. I will proceed the experiement without masking, but this is something we should consider.
