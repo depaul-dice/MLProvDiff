@@ -55,3 +55,9 @@
   1. Check with complex data
   2. Check with different structure
   3. Apply masking
+- Progress
+  1. Simpler and faster structure
+  2. Can try masking, but has two choices: 
+    - Normal masking at test stage.
+    - Sequential masking using masked information
+    - Should be tested on real data.
