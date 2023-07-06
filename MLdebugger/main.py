@@ -18,6 +18,10 @@ def main(args):
     num_epochs = args.num_epochs
     hidden_dim = args.hidden_dim
     random.seed(args.random_seed)
+    if args.use_float16:
+        torch.set_default_dtype(torch.float16)
+    if args.num_threads > 0:
+        torch.set_num_threads(args.num_threads)
 
     # load and process data
     num_features, feature_matrix, edge_list, traces_x, traces_y = data(file_name, use_ratio)
@@ -29,8 +33,8 @@ def main(args):
     train_x, train_y = traces_x[:num_train], traces_y[:num_train]
     test_x, test_y = traces_x[num_train:], traces_y[num_train:]
 
-    train_loader = DataLoader(TraceDataset(train_x, train_y), batch_size=batch_size, shuffle=True, num_workers=1, drop_last=True)
-    test_loader = DataLoader(TraceDataset(test_x, test_y), batch_size=batch_size, shuffle=True, num_workers=1, drop_last=False)
+    train_loader = DataLoader(TraceDataset(train_x, train_y), batch_size=batch_size, shuffle=True, num_workers=10, drop_last=True)
+    test_loader = DataLoader(TraceDataset(test_x, test_y), batch_size=batch_size, shuffle=True, num_workers=10, drop_last=False)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = CombinedModel(num_features, hidden_dim).to(device)
@@ -78,6 +82,8 @@ if __name__ == '__main__':
     parser.add_argument('--random_seed', type=int, default=0)
     parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--hidden_dim', type=int, default=128)
+    parser.add_argument('--use_float16', type=bool, default=True)
+    parser.add_argument('--num_threads', type=int, default=0)
     args = parser.parse_args()
 
     main(args)
