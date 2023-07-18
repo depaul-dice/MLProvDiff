@@ -17,6 +17,7 @@ def main(args):
     batch_size = args.batch_size
     num_epochs = args.num_epochs
     hidden_dim = args.hidden_dim
+    use_train = args.use_train
     random.seed(args.random_seed)
     if args.num_threads > 0:
         torch.set_num_threads(args.num_threads)
@@ -27,8 +28,11 @@ def main(args):
     # random split data into train and test
     random.shuffle(traces_x)
     random.shuffle(traces_y)
-    num_train = int(len(traces_x)*0.2)
-    train_x, train_y = traces_x[:num_train], traces_y[:num_train]
+    num_train = int(len(traces_x)*0.8)
+    if use_train: # use all data for training
+        train_x, train_y = traces_x, traces_y
+    else:
+        train_x, train_y = traces_x[:num_train], traces_y[:num_train]
     test_x, test_y = traces_x[num_train:], traces_y[num_train:]
 
     train_loader = DataLoader(TraceDataset(train_x, train_y), batch_size=batch_size, shuffle=True, num_workers=1, drop_last=True)
@@ -81,6 +85,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--hidden_dim', type=int, default=128)
     parser.add_argument('--num_threads', type=int, default=0)
+    parser.add_argument('--use_train', type=bool, default=False, help='use all data for training')
     args = parser.parse_args()
 
     main(args)
