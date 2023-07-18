@@ -34,7 +34,7 @@ def data(file_name, use_ratio):
     # create node idx to id mapping
     node2id = {}
     for i, node in enumerate(graph):
-        node2id[node] = i + 1
+        node2id[node] = i
 
     # create edge list
     edge_list_dep = []
@@ -42,14 +42,16 @@ def data(file_name, use_ratio):
 
     for node in graph.nodes:
         for neighbor in graph.neighbors(node):
-            edge_list_dep.append(node2id[node] - 1)
-            edge_list_rev.append(node2id[neighbor] - 1)
+            edge_list_dep.append(node2id[node])
+            edge_list_rev.append(node2id[neighbor])
             
     # create node feature list
     featureMatrix = []
 
     for node in graph.nodes:
-        featureMatrix.append([type2id[graph.nodes[node]['node_type']], label2id[graph.nodes[node]['label']]])
+        #featureMatrix.append([type2id[graph.nodes[node]['node_type']], label2id[graph.nodes[node]['label']]])
+        #featureMatrix.append(embed(label2id[graph.nodes[node]['label']], len(label2id)))
+        featureMatrix.append(Bembed(label2id[graph.nodes[node]['label']], 6))
 
     num_features = len(featureMatrix[0])
 
@@ -78,7 +80,14 @@ def data(file_name, use_ratio):
     return num_features, torch.tensor(featureMatrix, dtype=torch.float), torch.tensor([edge_list_dep, edge_list_rev], dtype=torch.long), traces_x, traces_y
 
 
+# one hot encoded embedding strategy
+def OHembed(num, dim):
+    return [0 if i != num else 1 for i in range(dim)]
 
+# binary encoded embedding strategy with max dim
+def Bembed(num, max_dim):
+    # binary encoding with max dim
+    return [int(i) for i in bin(num)[2:].zfill(max_dim)][-max_dim:]
 
 
 
