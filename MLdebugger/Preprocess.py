@@ -51,7 +51,7 @@ def data(file_name, use_ratio):
     for node in graph.nodes:
         #featureMatrix.append([type2id[graph.nodes[node]['node_type']], label2id[graph.nodes[node]['label']]])
         #featureMatrix.append(embed(label2id[graph.nodes[node]['label']], len(label2id)))
-        featureMatrix.append(Bembed(label2id[graph.nodes[node]['label']], 6))
+        featureMatrix.append([type2id[graph.nodes[node]['node_type']]].extend(Bembed(label2id[graph.nodes[node]['label']], 10)))
 
     num_features = len(featureMatrix[0])
 
