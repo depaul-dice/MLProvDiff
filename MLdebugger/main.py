@@ -26,6 +26,10 @@ def main(args):
     num_features, feature_matrix, edge_list, traces_x, traces_y = data(file_name, use_ratio)
 
     # random split data into train and test
+    temp = list(zip(traces_x, traces_y))
+    random.shuffle(temp)
+    traces_x, traces_y = zip(*temp)
+
     num_train = int(len(traces_x)*0.8)
     if use_train: # use all data for training
         train_x, train_y = traces_x, traces_y
