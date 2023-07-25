@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 
-from Preprocess import data
+from preprocess import data
 from CustomDataset import TraceDataset
 from model import CombinedModel
 
@@ -26,8 +26,6 @@ def main(args):
     num_features, feature_matrix, edge_list, traces_x, traces_y = data(file_name, use_ratio)
 
     # random split data into train and test
-    random.shuffle(traces_x)
-    random.shuffle(traces_y)
     num_train = int(len(traces_x)*0.8)
     if use_train: # use all data for training
         train_x, train_y = traces_x, traces_y
@@ -35,12 +33,12 @@ def main(args):
         train_x, train_y = traces_x[:num_train], traces_y[:num_train]
     test_x, test_y = traces_x[num_train:], traces_y[num_train:]
 
-    train_loader = DataLoader(TraceDataset(train_x, train_y), batch_size=batch_size, shuffle=True, num_workers=1, drop_last=True)
+    train_loader = DataLoader(TraceDataset(train_x, train_y), batch_size=batch_size, shuffle=True, num_workers=1, drop_last=False)
     test_loader = DataLoader(TraceDataset(test_x, test_y), batch_size=batch_size, shuffle=True, num_workers=1, drop_last=False)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = CombinedModel(num_features, hidden_dim).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=5e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
     # training and testing
     for epoch in range(num_epochs):

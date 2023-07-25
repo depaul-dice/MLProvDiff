@@ -24,6 +24,7 @@ class GraphSAGE(torch.nn.Module):
 
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index)
+        x = F.relu(x)
         return x
 
 class CombinedModel(torch.nn.Module):

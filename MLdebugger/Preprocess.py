@@ -1,5 +1,6 @@
 import pickle, random
 import torch
+import numpy as np
 
 # padd for the same length
 from torch.nn.utils.rnn import pad_sequence
@@ -18,8 +19,8 @@ def data(file_name, use_ratio):
 
     # check the node types
     types = set()
-    for i in range(len(journeys[0])):
-        types.add(graph.nodes[journeys[0][i]]['node_type'])
+    for i in graph.nodes:
+        types.add(graph.nodes[i]['node_type'])
 
     # create type and label -> id mapping
     type2id = {}
@@ -51,7 +52,7 @@ def data(file_name, use_ratio):
     for node in graph.nodes:
         #featureMatrix.append([type2id[graph.nodes[node]['node_type']], label2id[graph.nodes[node]['label']]])
         #featureMatrix.append(embed(label2id[graph.nodes[node]['label']], len(label2id)))
-        featureMatrix.append([type2id[graph.nodes[node]['node_type']]] + Bembed(label2id[graph.nodes[node]['label']], 10))
+        featureMatrix.append(OHembed(label2id[graph.nodes[node]['label']], len(label2id)))
 
     num_features = len(featureMatrix[0])
 
@@ -82,7 +83,9 @@ def data(file_name, use_ratio):
 
 # one hot encoded embedding strategy
 def OHembed(num, dim):
-    return [0 if i != num else 1 for i in range(dim)]
+    vec = [0] * dim
+    vec[num] = 1
+    return vec
 
 # binary encoded embedding strategy with max dim
 def Bembed(num, max_dim):
