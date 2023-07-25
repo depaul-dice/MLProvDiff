@@ -40,7 +40,7 @@ def main(args):
                         endId = node["id"]    
 
     stack = [startId]
-    dfs(stack, [])
+    dfs(stack, [startId])
 
     # save the journeys
     with open(f"{output_name}.pkl", "wb") as f:
@@ -94,4 +94,4 @@ if __name__ == "__main__":
     parser.add_argument("--num_journeys", type=int, default=10e3)
 
     args = parser.parse_args()
-    main(args)
+    main(args) 
