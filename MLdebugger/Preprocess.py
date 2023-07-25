@@ -50,10 +50,11 @@ def data(file_name, use_ratio):
     # create node feature list
     featureMatrix = []
 
-    dim = math.ceil(math.log2(len(label2id)))
+    dim1 = math.ceil(math.log2(len(type2id)))
+    dim2 = math.ceil(math.log2(len(label2id)))
 
     for node in graph.nodes:
-        featureMatrix.append(Bembed(label2id[graph.nodes[node]['label']], dim) + [type2id[graph.nodes[node]['node_type']]])
+        featureMatrix.append(Bembed(type2id[graph.nodes[node]['node_type']], dim1) + Bembed(label2id[graph.nodes[node]['label']], dim2))
 
     num_features = len(featureMatrix[0])
 
