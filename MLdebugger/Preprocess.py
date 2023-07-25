@@ -1,6 +1,7 @@
 import pickle, random
 import torch
 import numpy as np
+import math
 
 # padd for the same length
 from torch.nn.utils.rnn import pad_sequence
@@ -49,10 +50,10 @@ def data(file_name, use_ratio):
     # create node feature list
     featureMatrix = []
 
+    dim = math.ceil(math.log2(len(label2id)))
+
     for node in graph.nodes:
-        #featureMatrix.append([type2id[graph.nodes[node]['node_type']], label2id[graph.nodes[node]['label']]])
-        #featureMatrix.append(embed(label2id[graph.nodes[node]['label']], len(label2id)))
-        featureMatrix.append(OHembed(label2id[graph.nodes[node]['label']], len(label2id)))
+        featureMatrix.append(Bembed(label2id[graph.nodes[node]['label']], dim) + [type2id[graph.nodes[node]['node_type']]])
 
     num_features = len(featureMatrix[0])
 
@@ -91,6 +92,11 @@ def OHembed(num, dim):
 def Bembed(num, max_dim):
     # binary encoding with max dim
     return [int(i) for i in bin(num)[2:].zfill(max_dim)][-max_dim:]
+
+# modular encoded embedding strategy with max dim
+def Membed(num, max_dim):
+    # modular encoding with max dim
+    return [int(i) for i in bin(num % max_dim)[2:].zfill(max_dim)][-max_dim:]
 
 
 
