@@ -18,9 +18,14 @@ def main(args):
     num_epochs = args.num_epochs
     hidden_dim = args.hidden_dim
     use_train = args.use_train
+    use_mask = args.use_mask
     random.seed(args.random_seed)
     if args.num_threads > 0:
         torch.set_num_threads(args.num_threads)
+
+    # print arguments
+    print('use trained data for test: ', use_train)
+    print('use mask: ', use_mask)
 
     # load and process data
     num_features, feature_matrix, edge_list, traces_x, traces_y = data(file_name, use_ratio)
@@ -51,7 +56,7 @@ def main(args):
             model.train()
             optimizer.zero_grad()
             trace_x, trace_y = batch
-            trace_x, trace_y = trace_x.to(device), trace_y.to(device)
+            trace_x, trace_y, feature_matrix, edge_list = trace_x.to(device), trace_y.to(device), feature_matrix.to(device), edge_list.to(device)
             combined = model(trace_x, feature_matrix, edge_list)
             combined = combined.view(-1, combined.size(-1))
             trace_y = trace_y.view(-1)
@@ -70,7 +75,19 @@ def main(args):
         with torch.no_grad():
             for batch in test_loader:
                 trace_x, trace_y = batch
-                combined = model(trace_x, feature_matrix, edge_list)
+                trace_x, trace_y, feature_matrix, edge_list = trace_x.to(device), trace_y.to(device), feature_matrix.to(device), edge_list.to(device)
+                combined = model(trace_x, feature_matrix, edge_list) # B * T * N
+
+                # masking
+                if use_mask:
+                    # trace_x: B * T * F ->  B * T * N * F
+                    # feature_matrix: N * F -> B * T * N * F
+                    tx = trace_x.unsqueeze(2).expand(-1, -1, feature_matrix.size(0), -1) 
+                    fm = feature_matrix.unsqueeze(0).unsqueeze(0).expand(trace_x.size(0), trace_x.size(1), -1, -1)
+                    mask = (tx == fm).all(dim=-1) # B * T * N
+                    combined = combined.masked_fill(~mask, float('-inf'))
+                
+                # inference
                 pred = combined.argmax(dim=2)
                 num_correct += pred.eq(trace_y).sum()
                 num_total += len(trace_y.view(-1))
@@ -88,6 +105,7 @@ if __name__ == '__main__':
     parser.add_argument('--hidden_dim', type=int, default=128)
     parser.add_argument('--num_threads', type=int, default=0)
     parser.add_argument('--use_train', type=bool, default=False, help='use all data for training')
+    parser.add_argument('--use_mask', type=bool, default=False)
     args = parser.parse_args()
 
     main(args)
