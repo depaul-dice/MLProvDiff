@@ -54,6 +54,7 @@ def data(file_name, use_ratio):
 
     for node in graph.nodes:
         featureMatrix.append(OHembed(type2id[graph.nodes[node]['node_type']], len(type2id)) + Bembed(label2id[graph.nodes[node]['label']], dim))
+        # featureMatrix.append(OHembed(label2id[graph.nodes[node]['label']], len(label2id)))
 
     num_features = len(featureMatrix[0])
 
