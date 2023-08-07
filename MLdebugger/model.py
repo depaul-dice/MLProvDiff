@@ -2,10 +2,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import SAGEConv
 import torch
-from tqdm import tqdm
 
 class BiLSTM(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers=1):
+    def __init__(self, in_channels, hidden_channels, num_layers):
         super(BiLSTM, self).__init__()
         self.lstm = nn.LSTM(input_size=in_channels,
                             hidden_size=hidden_channels,
@@ -21,17 +20,20 @@ class GraphSAGE(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels):
         super(GraphSAGE, self).__init__()
         self.conv1 = SAGEConv(in_channels, hidden_channels)
+        self.conv2 = SAGEConv(hidden_channels, hidden_channels)
 
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index)
         x = F.relu(x)
+        x = self.conv2(x, edge_index)
+        x = F.relu(x)
         return x
 
 class CombinedModel(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels):
+    def __init__(self, in_channels, hidden_channels, num_layers=1):
         super(CombinedModel, self).__init__()
         self.graphsage = GraphSAGE(in_channels, hidden_channels)
-        self.bilstm = BiLSTM(in_channels, hidden_channels//2)
+        self.bilstm = BiLSTM(in_channels, hidden_channels//2, num_layers)
 
     def forward(self, trace, x, edge_index):
         embeddings = self.graphsage(x, edge_index)
