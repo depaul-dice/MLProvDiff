@@ -81,10 +81,8 @@ def main(args):
 
                 # masking
                 if use_mask:
-                    # trace_x: B * T * F ->  B * T * N * F
-                    tx = trace_x.unsqueeze(2).expand(-1, -1, feature_matrix.size(0), -1) 
-                    # feature_matrix: N * F -> B * T * N * F
-                    fm = feature_matrix.unsqueeze(0).unsqueeze(0).expand(trace_x.size(0), trace_x.size(1), -1, -1)
+                    tx = trace_x.unsqueeze(2).expand(-1, -1, feature_matrix.size(0), -1) # B * T * F ->  B * T * N * F
+                    fm = feature_matrix.unsqueeze(0).unsqueeze(0).expand(trace_x.size(0), trace_x.size(1), -1, -1) # N * F -> B * T * N * F
                     mask = (tx == fm).all(dim=-1) # B * T * N
                     combined = combined.masked_fill(~mask, float('-inf'))
                 
