@@ -54,14 +54,29 @@ class GraphSAGE(torch.nn.Module):
         return x2
 
 class CombinedModel(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers=1):
+    def __init__(self, in_channels, hidden_channels, num_layers=1, mode="dot"):
         super(CombinedModel, self).__init__()
         self.graphsage = GraphSAGE(in_channels, hidden_channels)
         self.bilstm = BiLSTM(in_channels, hidden_channels//2, num_layers)
+        self.mode = mode
 
     def forward(self, trace, x, edge_index):
         embeddings = self.graphsage(x, edge_index)
         out_bilstm = self.bilstm(trace)
         embeddings_expanded = embeddings.unsqueeze(0).expand(out_bilstm.size(0), -1, -1)
-        combined = torch.bmm(out_bilstm, embeddings_expanded.transpose(1, 2))
+        
+        # dot product
+        if self.mode == "dot":
+            combined = torch.bmm(out_bilstm, embeddings_expanded.transpose(1, 2)) # B * T * N
+        # cosine similarity
+        elif self.mode == "cos":
+            out_bilstm = F.normalize(out_bilstm, p=2, dim=-1) # B * T * E
+            embeddings_expanded = F.normalize(embeddings_expanded, p=2, dim=-1) # B * N * E
+            combined = torch.bmm(out_bilstm, embeddings_expanded.transpose(1, 2)) # B * T * N
+        # -euclidean distance
+        else:
+            #print(out_bilstm.unsqueeze(2).size(), embeddings_expanded.unsqueeze(1).size())
+            combined = -torch.norm(out_bilstm.unsqueeze(2) - embeddings_expanded.unsqueeze(1), dim=-1)
+            
+        
         return combined
