@@ -20,6 +20,7 @@ def main(args):
     use_train = args.use_train
     use_mask = args.use_mask
     num_lstm = args.num_lstm
+    mode = args.mode
     random.seed(args.random_seed)
     if args.num_threads > 0:
         torch.set_num_threads(args.num_threads)
@@ -47,7 +48,7 @@ def main(args):
     test_loader = DataLoader(TraceDataset(test_x, test_y), batch_size=batch_size, shuffle=True, num_workers=1, drop_last=False)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = CombinedModel(num_features, hidden_dim, num_lstm).to(device)
+    model = CombinedModel(num_features, hidden_dim, num_lstm, mode).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
     # training and testing
@@ -106,6 +107,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_train', type=bool, default=False, help='use all data for training')
     parser.add_argument('--use_mask', type=bool, default=False)
     parser.add_argument('--num_lstm', type=int, default=1)
+    parser.add_argument('--mode', type=str, default='dot')
     args = parser.parse_args()
 
     main(args)
