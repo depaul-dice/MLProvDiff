@@ -2,13 +2,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import SAGEConv
 import torch
+from transformer import TransformerEncoderModel
 
 class BiLSTM(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout):
         super(BiLSTM, self).__init__()
         self.lstm = nn.LSTM(input_size=in_channels,
                             hidden_size=hidden_channels,
                             num_layers=num_layers,
+                            dropout=dropout,
                             bidirectional=True,
                             batch_first=True)
     
@@ -31,29 +33,21 @@ class GraphSAGE(torch.nn.Module):
         
 
 class CombinedModel(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers=1, mode="dot"):
+    def __init__(self, in_channels, hidden_channels, num_layers, encoder, num_heads, dropout):
         super(CombinedModel, self).__init__()
         self.graphsage = GraphSAGE(in_channels, hidden_channels)
-        self.bilstm = BiLSTM(in_channels, hidden_channels//2, num_layers)
-        self.mode = mode
+        
+        if encoder == 'lstm':
+            self.encoder = BiLSTM(in_channels, hidden_channels//2, num_layers, dropout)
+        elif encoder == 'transformer':
+            self.encoder = TransformerEncoderModel(in_channels, hidden_channels, num_layers, num_heads, dropout)
+        else:
+            raise Exception(f'Encoder named "{encoder}" not supported. Please choose from "lstm" or "transformer"')
 
     def forward(self, trace, x, edge_index):
         embeddings = self.graphsage(x, edge_index)
-        out_bilstm = self.bilstm(trace)
-        embeddings_expanded = embeddings.unsqueeze(0).expand(out_bilstm.size(0), -1, -1)
-        
-        # dot product
-        if self.mode == "dot":
-            combined = torch.bmm(out_bilstm, embeddings_expanded.transpose(1, 2)) # B * T * N
-        # cosine similarity
-        elif self.mode == "cos":
-            out_bilstm = F.normalize(out_bilstm, p=2, dim=-1) # B * T * E
-            embeddings_expanded = F.normalize(embeddings_expanded, p=2, dim=-1) # B * N * E
-            combined = torch.bmm(out_bilstm, embeddings_expanded.transpose(1, 2)) # B * T * N
-        # -euclidean distance
-        else:
-            #print(out_bilstm.unsqueeze(2).size(), embeddings_expanded.unsqueeze(1).size())
-            combined = -torch.norm(out_bilstm.unsqueeze(2) - embeddings_expanded.unsqueeze(1), dim=-1)
-            
+        out_encoder = self.encoder(trace)
+        embeddings_expanded = embeddings.unsqueeze(0).expand(out_encoder.size(0), -1, -1)
+        combined = torch.bmm(out_encoder, embeddings_expanded.transpose(1, 2)) # B * T * N
         
         return combined

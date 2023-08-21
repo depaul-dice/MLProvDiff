@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from preprocess import data
 from CustomDataset import TraceDataset
 from model import CombinedModel
+from transformerScheduler import TransformerScheduler
 
 def main(args):
 
@@ -19,8 +20,10 @@ def main(args):
     hidden_dim = args.hidden_dim
     use_train = args.use_train
     use_mask = args.use_mask
-    num_lstm = args.num_lstm
-    mode = args.mode
+    num_layers = args.num_layers
+    encoder = args.encoder
+    num_heads = args.num_heads
+    dropout = args.dropout
     random.seed(args.random_seed)
     if args.num_threads > 0:
         torch.set_num_threads(args.num_threads)
@@ -48,8 +51,9 @@ def main(args):
     test_loader = DataLoader(TraceDataset(test_x, test_y), batch_size=batch_size, shuffle=True, num_workers=1, drop_last=False)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = CombinedModel(num_features, hidden_dim, num_lstm, mode).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
+    model = CombinedModel(num_features, hidden_dim, num_layers=num_layers, encoder=encoder, num_heads=num_heads, dropout=dropout).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, betas=(0.9, 0.98), eps=1e-9)
+    scheduler = TransformerScheduler(optimizer, warmup_steps=4000, d_model=hidden_dim)
 
     # training and testing
     for epoch in range(num_epochs):
@@ -65,6 +69,8 @@ def main(args):
             loss = F.cross_entropy(combined, trace_y)
             loss.backward()
             optimizer.step()
+            if encoder == 'transformer':
+                scheduler.step()
 
         if 'loss' not in locals():
             raise Exception('No training data supplied. Check the amount!')
@@ -106,8 +112,10 @@ if __name__ == '__main__':
     parser.add_argument('--num_threads', type=int, default=0)
     parser.add_argument('--use_train', type=bool, default=False, help='use all data for training')
     parser.add_argument('--use_mask', type=bool, default=False)
-    parser.add_argument('--num_lstm', type=int, default=1)
-    parser.add_argument('--mode', type=str, default='dot')
+    parser.add_argument('--num_layers', type=int, default=1)
+    parser.add_argument('--num_heads', type=int, default=16)
+    parser.add_argument('--dropout', type=float, default=0.1)
+    parser.add_argument('--encoder', type=str, default='transformer')
     args = parser.parse_args()
 
     main(args)
