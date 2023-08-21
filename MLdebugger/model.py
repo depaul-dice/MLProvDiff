@@ -31,7 +31,6 @@ class GraphSAGE(torch.nn.Module):
         x = F.relu(x)
         return x
         
-
 class CombinedModel(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, num_layers, encoder, num_heads, dropout):
         super(CombinedModel, self).__init__()

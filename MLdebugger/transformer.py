@@ -33,12 +33,6 @@ class TransformerEncoderModel(nn.Module):
         )
 
     def forward(self, x):
-        # padding
-        # x = F.pad(x, (0, self.embed_dim - self.input_size))
-        x = self.conv1(x)
-        x = F.relu(x)
-        c2 = self.conv2(x)
-        x = F.relu(x + c2)
 
         # scaling input 
         x = x * (self.embed_dim ** 0.5)

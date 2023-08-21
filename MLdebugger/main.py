@@ -51,9 +51,9 @@ def main(args):
     test_loader = DataLoader(TraceDataset(test_x, test_y), batch_size=batch_size, shuffle=True, num_workers=1, drop_last=False)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = CombinedModel(num_features, hidden_dim, num_layers=num_layers, encoder=encoder, num_heads=num_heads, dropout=dropout).to(device)
+    model = CombinedModel(num_features, num_features, num_layers=num_layers, encoder=encoder, num_heads=num_heads, dropout=dropout).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, betas=(0.9, 0.98), eps=1e-9)
-    scheduler = TransformerScheduler(optimizer, warmup_steps=4000, d_model=hidden_dim)
+    scheduler = TransformerScheduler(optimizer, warmup_steps=4000, d_model=num_features)
 
     # training and testing
     for epoch in range(num_epochs):
