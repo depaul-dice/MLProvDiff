@@ -12,6 +12,7 @@ def data(file_name, use_ratio):
     '''
 
     with open(f'./data/{file_name}_journeys.pkl', 'rb') as f:
+    # with open(f'./data/output.pkl', 'rb') as f:
         journeys = pickle.load(f)
         journeys = random.sample(journeys, int(len(journeys) * use_ratio))
 
