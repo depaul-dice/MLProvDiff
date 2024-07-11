@@ -25,11 +25,11 @@ def main(args):
     allow_cycle = True
 
     # read the graph with pickle
-    with open(f"{graph_file}", "rb") as f:
-        graph = pickle.load(f)
+    with open(f"../data/{graph_file}", "rb") as f:
+        graph, entry, exit = pickle.load(f)
 
     # get the id of start and the end node
-    with open(f"{system_file}", "r") as f:
+    with open(f"../data/{system_file}", "r") as f:
         funcs = json.load(f)
         for func in funcs:
             if func["function name"] == "main":
@@ -46,8 +46,9 @@ def main(args):
             print(len(journeys_RW) / num_journeys * 100, "% done")
         randomWalk(graph, start_id, end_id, max_length, allow_cycle)
 
+    s_journeys_RW = set(tuple(j) for j in journeys_RW)
     # save the journeys
-    with open(f"{output_name}.pkl", "wb") as f:
+    with open(f"{output_name}_journeys.pkl", "wb") as f:
         pickle.dump(journeys_RW, f)
 
     # plot the graph
@@ -66,7 +67,7 @@ def main(args):
 
 
 def randomWalk(graph, start_id, end_id, max_length, allow_cycle=True):
-    global journeysRW
+    global journeys_RW
     
     path = [start_id]
     current_node = start_id
@@ -94,4 +95,4 @@ if __name__ == "__main__":
     parser.add_argument("--num_journeys", type=int, default=10e2)
 
     args = parser.parse_args()
-    main(args) 
+    main(args)

@@ -17,7 +17,7 @@ def data(file_name, use_ratio):
         journeys = random.sample(journeys, int(len(journeys) * use_ratio))
 
     with open(f'./data/{file_name}_combined_graph.pkl', 'rb') as f:
-        graph = pickle.load(f)
+        graph, entry, exit = pickle.load(f)
 
     # check the node types
     types = set()
@@ -51,7 +51,10 @@ def data(file_name, use_ratio):
     # create node feature list
     featureMatrix = []
 
-    dim = math.ceil(math.log2(len(label2id)))
+    # dim = math.ceil(math.log2(len(label2id)))
+    # this is the maximum dimension for any of the current functions, 
+    # the highest for sort
+    dim = 9
 
     for node in graph.nodes:
         featureMatrix.append(OHembed(type2id[graph.nodes[node]['node_type']], len(type2id)) + Bembed(label2id[graph.nodes[node]['label']], dim))
@@ -99,8 +102,3 @@ def Bembed(num, max_dim):
 def Membed(num, max_dim):
     # modular encoding with max dim
     return [int(i) for i in bin(num % max_dim)[2:].zfill(max_dim)][-max_dim:]
-
-
-
-    
-    

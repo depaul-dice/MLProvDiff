@@ -1,14 +1,21 @@
+
 import pickle, random, argparse
 from tqdm import tqdm
+import gc
 
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torch.nn.functional as F
+from torch.nn import DataParallel
 
-from preprocess import data
+from Preprocess import data
 from CustomDataset import TraceDataset
-from model import CombinedModel
+from model import GraphSAGE, Model2, CombinedModel
 from transformerScheduler import TransformerScheduler
+
+#import os
+#os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 
 def main(args):
 
@@ -31,6 +38,12 @@ def main(args):
     # print arguments
     print('use trained data for test: ', use_train)
     print('use mask: ', use_mask)
+    print('gpu: ', torch.cuda.is_available())
+    print('devices: ', torch.cuda.device_count())
+    # empty cuda cache
+    with torch.no_grad():
+      torch.cuda.empty_cache()
+    gc.collect()
 
     # load and process data
     num_features, feature_matrix, edge_list, traces_x, traces_y = data(file_name, use_ratio)
@@ -47,46 +60,83 @@ def main(args):
         train_x, train_y = traces_x[:num_train], traces_y[:num_train]
     test_x, test_y = traces_x[num_train:], traces_y[num_train:]
 
-    train_loader = DataLoader(TraceDataset(train_x, train_y), batch_size=batch_size, shuffle=True, num_workers=1, drop_last=False)
-    test_loader = DataLoader(TraceDataset(test_x, test_y), batch_size=batch_size, shuffle=True, num_workers=1, drop_last=False)
+    train_loader = DataLoader(TraceDataset(train_x, train_y), batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True)
+    test_loader = DataLoader(TraceDataset(test_x, test_y), batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True)
+#    train_loader = DataLoader(TensorDataset(train_x, train_y), batch_size=batch_size, shuffle=True, num_workers=4, drop_last=False)
+#    test_loader = DataLoader(TensorDataset(test_x, test_y), batch_size=batch_size, shuffle=True, num_workers=4, drop_last=False)
+#    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#    device = 'cpu'
+    device1 = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    device2 = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+    device3 = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+    print("device1: ", device1)
+    print("device2: ", device2)
+    print("device3: ", device3)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
     hidden_dim = num_features if encoder == 'transformer' else hidden_dim
-    model = CombinedModel(num_features, hidden_dim, num_layers=num_layers, encoder=encoder, num_heads=num_heads, dropout=dropout).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, betas=(0.9, 0.98), eps=1e-9)
+    model1 = GraphSAGE(num_features, hidden_dim)
+    model1.to(device1)
+    model2 = Model2(num_features, hidden_dim, num_layers=num_layers, encoder=encoder, num_heads=num_heads, dropout=dropout)
+    model2.to(device2)
+    model3 = CombinedModel()
+    model3.to(device3)
+#    model = CombinedModel(num_features, hidden_dim, num_layers=num_layers, encoder=encoder, num_heads=num_heads, dropout=dropout).to(device)
+    optimizer = torch.optim.Adam(list(model1.parameters())+list(model2.parameters())+list(model3.parameters()), lr=1e-3, betas=(0.9, 0.98), eps=1e-9)
     scheduler = TransformerScheduler(optimizer, warmup_steps=4000, d_model=num_features)
 
     # training and testing
     for epoch in range(num_epochs):
+#        with torch.no_grad():
+#            torch.cuda.empty_cache()
+#        gc.collect()
         # train
         for batch in tqdm(train_loader):
-            model.train()
+            model1.train()
+            model2.train()
+            model3.train()
             optimizer.zero_grad()
             trace_x, trace_y = batch
-            trace_x, trace_y, feature_matrix, edge_list = trace_x.to(device), trace_y.to(device), feature_matrix.to(device), edge_list.to(device)
-            combined = model(trace_x, feature_matrix, edge_list)
+            trace_x, trace_y, feature_matrix, edge_list = trace_x.to(device2), trace_y.to(device3), feature_matrix.to(device1), edge_list.to(device1)
+            # combined = model(trace_x, feature_matrix, edge_list)
+#            print("trace_x.shape:", trace_x.shape)
+#            print("feature_matrix.shape:", feature_matrix.shape)
+#            print("edge_list.shape:", edge_list.shape)
+            embeddings = model1(feature_matrix, edge_list)
+            embeddings = embeddings.to(device2)
+            out_encoder = model2(trace_x, embeddings)
+            out_encoder = out_encoder.to(device3)
+            embeddings = embeddings.to(device3)
+            combined = model3(out_encoder, embeddings)
+#            combined = model(trace_x, feature_matrix, edge_list)
             combined = combined.view(-1, combined.size(-1))
             trace_y = trace_y.view(-1)
+            # print(torch.cuda.memory_summary(device=None, abbreviated=False))
             loss = F.cross_entropy(combined, trace_y)
             loss.backward()
             optimizer.step()
             if encoder == 'transformer':
                 scheduler.step()
-
+                
         if 'loss' not in locals():
             raise Exception('No training data supplied. Check the amount!')
 
         # test
-        model.eval()
+        model1.eval()
+        model2.eval()
+        model3.eval()
         num_correct = 0
         num_total = 0
 
         with torch.no_grad():
             for batch in test_loader:
                 trace_x, trace_y = batch
-                trace_x, trace_y, feature_matrix, edge_list = trace_x.to(device), trace_y.to(device), feature_matrix.to(device), edge_list.to(device)
-                combined = model(trace_x, feature_matrix, edge_list) # B * T * N
+                trace_x, trace_y, feature_matrix, edge_list = trace_x.to(device2), trace_y.to(device3), feature_matrix.to(device1), edge_list.to(device1)
+                embeddings = model1(feature_matrix, edge_list)
+                embeddings = embeddings.to(device2)
+                out_encoder = model2(trace_x, embeddings)
+                out_encoder = out_encoder.to(device3)
+                embeddings = embeddings.to(device3)
+                combined = model3(out_encoder, embeddings) # B * T * N
 
                 # masking
                 if use_mask:
@@ -94,8 +144,8 @@ def main(args):
                     fm = feature_matrix.unsqueeze(0).unsqueeze(0).expand(trace_x.size(0), trace_x.size(1), -1, -1) # N * F -> B * T * N * F
                     mask = (tx == fm).all(dim=-1) # B * T * N
                     combined = combined.masked_fill(~mask, float('-inf'))
-                
-                # inference
+
+                 # inference
                 pred = combined.argmax(dim=2)
                 num_correct += pred.eq(trace_y).sum()
                 num_total += len(trace_y.view(-1))
