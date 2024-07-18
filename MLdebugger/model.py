@@ -28,7 +28,7 @@ class Model2(torch.nn.Module):
         else:
             raise Exception(f'Encoder named "{encoder}" not supported. Please choose from "lstm" or "transformer"')
 
-    def forward(self, trace, embeddings):
+    def forward(self, trace):
         out_encoder = self.encoder(trace)
         return out_encoder
 
@@ -46,6 +46,7 @@ class CombinedModel(torch.nn.Module):
     def forward(self, out_encoder, embeddings):
 #        embeddings = self.graphsage(x, edge_index)
 #        out_encoder = self.encoder(trace)
+        # this is for trace 1, do the same again for trace 2 and return both in a tensor.
         embeddings_expanded = embeddings.unsqueeze(0).expand(out_encoder.size(0), -1, -1)
         combined = torch.bmm(out_encoder, embeddings_expanded.transpose(1, 2)) # B * T * N
         return combined

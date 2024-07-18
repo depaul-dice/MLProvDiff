@@ -11,13 +11,13 @@ def data(file_name, use_ratio):
         return: num_features -> int, feature_matrix -> tensor[float], edge_list -> tensor[long], traces_x -> tensor[float], traces_y -> tensor[long]
     '''
 
-    with open(f'./data/{file_name}_journeys.pkl', 'rb') as f:
+    with open(f'../data/{file_name}_journeys.pkl', 'rb') as f:
     # with open(f'./data/output.pkl', 'rb') as f:
         journeys = pickle.load(f)
         journeys = random.sample(journeys, int(len(journeys) * use_ratio))
 
-    with open(f'./data/{file_name}_combined_graph.pkl', 'rb') as f:
-        graph, entry, exit = pickle.load(f)
+    with open(f'../data/{file_name}_combined_graph.pkl', 'rb') as f:
+        graph, entry, exit_ = pickle.load(f)
 
     # check the node types
     types = set()
@@ -84,7 +84,17 @@ def data(file_name, use_ratio):
     traces_x = pad_sequence(journeys_fm, batch_first=True)
     traces_y = pad_sequence(journeys_id, batch_first=True)
 
-    return num_features, torch.tensor(featureMatrix, dtype=torch.float), torch.tensor([edge_list_dep, edge_list_rev], dtype=torch.long), traces_x, traces_y
+    # for two inputs and two outputs
+    random_idx_1 = random.sample(range(0, len(traces_x)), 1000)
+    random_idx_2 = random.sample(range(0, len(traces_x)), 1000)
+    data_x = []
+    data_y = []
+    for i, j in zip(random_idx_1, random_idx_2):
+        data_x.append((traces_x[i], traces_x[j]))
+        data_y.append((traces_y[i], traces_y[j]))
+
+    # return num_features, torch.tensor(featureMatrix, dtype=torch.float), torch.tensor([edge_list_dep, edge_list_rev], dtype=torch.long), traces_x, traces_y
+    return num_features, torch.tensor(featureMatrix, dtype=torch.float), torch.tensor([edge_list_dep, edge_list_rev], dtype=torch.long), data_x, data_y
 
 
 # one hot encoded embedding strategy

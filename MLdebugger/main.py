@@ -59,7 +59,7 @@ def main(args):
     else:
         train_x, train_y = traces_x[:num_train], traces_y[:num_train]
     test_x, test_y = traces_x[num_train:], traces_y[num_train:]
-
+    
     train_loader = DataLoader(TraceDataset(train_x, train_y), batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True)
     test_loader = DataLoader(TraceDataset(test_x, test_y), batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True)
 #    train_loader = DataLoader(TensorDataset(train_x, train_y), batch_size=batch_size, shuffle=True, num_workers=4, drop_last=False)
@@ -95,22 +95,29 @@ def main(args):
             model2.train()
             model3.train()
             optimizer.zero_grad()
-            trace_x, trace_y = batch
-            trace_x, trace_y, feature_matrix, edge_list = trace_x.to(device2), trace_y.to(device3), feature_matrix.to(device1), edge_list.to(device1)
-            # combined = model(trace_x, feature_matrix, edge_list)
-#            print("trace_x.shape:", trace_x.shape)
-#            print("feature_matrix.shape:", feature_matrix.shape)
-#            print("edge_list.shape:", edge_list.shape)
+            trace_x, trace_y = batch            
+            trace_x_0, trace_x_1 = trace_x
+            trace_y_0, trace_y_1 = trace_y
+            trace_x_0, trace_x_1, trace_y_0, trace_y_1, feature_matrix, edge_list = trace_x_0.to(device2), trace_x_1.to(device2), \
+            trace_y_0.to(device3), trace_y_1.to(device3), feature_matrix.to(device1), edge_list.to(device1)
+
             embeddings = model1(feature_matrix, edge_list)
             embeddings = embeddings.to(device2)
-            out_encoder = model2(trace_x, embeddings)
+            
+            trace_x = torch.cat((trace_x_0, trace_x_1))
+            out_encoder = model2(trace_x)
             out_encoder = out_encoder.to(device3)
             embeddings = embeddings.to(device3)
             combined = model3(out_encoder, embeddings)
-#            combined = model(trace_x, feature_matrix, edge_list)
+            pred = combined.argmax(dim=2)
             combined = combined.view(-1, combined.size(-1))
+            trace_y = torch.cat((trace_y_0, trace_y_1))
             trace_y = trace_y.view(-1)
-            # print(torch.cuda.memory_summary(device=None, abbreviated=False))
+            import torchmetrics
+            from torchmetrics.text import EditDistance
+            metric = EditDistance()
+            print(metric([pred], [trace_y]))
+            exit()
             loss = F.cross_entropy(combined, trace_y)
             loss.backward()
             optimizer.step()
@@ -130,10 +137,14 @@ def main(args):
         with torch.no_grad():
             for batch in test_loader:
                 trace_x, trace_y = batch
-                trace_x, trace_y, feature_matrix, edge_list = trace_x.to(device2), trace_y.to(device3), feature_matrix.to(device1), edge_list.to(device1)
+                trace_x_0, trace_x_1 = trace_x
+                trace_y_0, trace_y_1 = trace_y
+                trace_x_0, trace_x_1, trace_y_0, trace_y_1, feature_matrix, edge_list = trace_x_0.to(device2), trace_x_1.to(device2), \
+                trace_y_0.to(device3), trace_y_1.to(device3), feature_matrix.to(device1), edge_list.to(device1)                
                 embeddings = model1(feature_matrix, edge_list)
                 embeddings = embeddings.to(device2)
-                out_encoder = model2(trace_x, embeddings)
+                trace_x = torch.cat((trace_x_0, trace_x_1))
+                out_encoder = model2(trace_x)
                 out_encoder = out_encoder.to(device3)
                 embeddings = embeddings.to(device3)
                 combined = model3(out_encoder, embeddings) # B * T * N
@@ -147,6 +158,7 @@ def main(args):
 
                  # inference
                 pred = combined.argmax(dim=2)
+                trace_y = torch.cat((trace_y_0, trace_y_1))
                 num_correct += pred.eq(trace_y).sum()
                 num_total += len(trace_y.view(-1))
 
